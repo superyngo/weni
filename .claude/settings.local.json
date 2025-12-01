@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cargo build:*)",
+      "Bash(cargo run)",
+      "Bash(cargo run:*)",
+      "Bash(.\\target\\release\\weni.exe:*)",
+      "Bash(target/release/weni.exe:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

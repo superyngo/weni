@@ -3,7 +3,7 @@ use colored::Colorize;
 use comfy_table::{Table, Row, Cell, presets::UTF8_FULL};
 use serde::Serialize;
 
-use crate::collectors::{SystemInfo, BatteryInfo, DisksInfo, NetworkInfo, TemperatureInfo, DisplayInfo};
+use crate::collectors::{SystemInfo, BatteryInfo, DisksInfo, NetworkInfo, TemperatureInfo};
 
 pub enum OutputFormat {
     Text,
@@ -17,7 +17,6 @@ struct AllInfo {
     disks: Option<DisksInfo>,
     network: Option<NetworkInfo>,
     temperature: Option<TemperatureInfo>,
-    display: Option<DisplayInfo>,
 }
 
 pub fn display_info(
@@ -26,12 +25,11 @@ pub fn display_info(
     disks_info: Option<DisksInfo>,
     network_info: Option<NetworkInfo>,
     temp_info: Option<TemperatureInfo>,
-    display_info: Option<DisplayInfo>,
     format: OutputFormat,
 ) -> Result<()> {
     match format {
-        OutputFormat::Text => display_text(&system_info, &battery_info, &disks_info, &network_info, &temp_info, &display_info),
-        OutputFormat::Json => display_json(&system_info, &battery_info, &disks_info, &network_info, &temp_info, &display_info),
+        OutputFormat::Text => display_text(&system_info, &battery_info, &disks_info, &network_info, &temp_info),
+        OutputFormat::Json => display_json(&system_info, &battery_info, &disks_info, &network_info, &temp_info),
     }
 }
 
@@ -41,7 +39,6 @@ fn display_text(
     disks_info: &Option<DisksInfo>,
     network_info: &Option<NetworkInfo>,
     temp_info: &Option<TemperatureInfo>,
-    display_info: &Option<DisplayInfo>,
 ) -> Result<()> {
 
     if let Some(os) = &system_info.os {
@@ -263,47 +260,6 @@ fn display_text(
         }
     }
 
-    if let Some(displays) = display_info {
-        if !displays.monitors.is_empty() {
-            println!("{}", "Display Information".bold().cyan());
-            println!("Total Monitors: {}\n", displays.total_count);
-
-            for monitor in &displays.monitors {
-                let mut display_table = Table::new();
-                display_table.load_preset(UTF8_FULL);
-                display_table.add_row(Row::from(vec![
-                    Cell::new("Monitor").fg(comfy_table::Color::Yellow),
-                    Cell::new(if monitor.is_primary {
-                        format!("{} (Primary)", monitor.name)
-                    } else {
-                        monitor.name.clone()
-                    }),
-                ]));
-                display_table.add_row(Row::from(vec![
-                    Cell::new("ID").fg(comfy_table::Color::Yellow),
-                    Cell::new(monitor.id.to_string()),
-                ]));
-                display_table.add_row(Row::from(vec![
-                    Cell::new("Resolution").fg(comfy_table::Color::Yellow),
-                    Cell::new(format!("{}x{}", monitor.width, monitor.height)),
-                ]));
-                display_table.add_row(Row::from(vec![
-                    Cell::new("Refresh Rate").fg(comfy_table::Color::Yellow),
-                    Cell::new(format!("{} Hz", monitor.refresh_rate)),
-                ]));
-                display_table.add_row(Row::from(vec![
-                    Cell::new("Scale Factor").fg(comfy_table::Color::Yellow),
-                    Cell::new(format!("{:.2}x", monitor.scale_factor)),
-                ]));
-                display_table.add_row(Row::from(vec![
-                    Cell::new("Position").fg(comfy_table::Color::Yellow),
-                    Cell::new(format!("({}, {})", monitor.x, monitor.y)),
-                ]));
-                println!("{display_table}\n");
-            }
-        }
-    }
-
     println!();
     Ok(())
 }
@@ -314,7 +270,6 @@ fn display_json(
     disks_info: &Option<DisksInfo>,
     network_info: &Option<NetworkInfo>,
     temp_info: &Option<TemperatureInfo>,
-    display_info: &Option<DisplayInfo>,
 ) -> Result<()> {
     let all_info = AllInfo {
         system: system_info.clone(),
@@ -322,7 +277,6 @@ fn display_json(
         disks: disks_info.clone(),
         network: network_info.clone(),
         temperature: temp_info.clone(),
-        display: display_info.clone(),
     };
 
     let json = serde_json::to_string_pretty(&all_info)?;

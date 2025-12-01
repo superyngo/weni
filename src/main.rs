@@ -3,7 +3,7 @@ use std::io::{self, Write};
 use std::thread;
 use std::time::Duration;
 use weni::{
-    BatteryInfo, DisksInfo, NetworkInfo, SystemInfo, TemperatureInfo, DisplayInfo,
+    BatteryInfo, DisksInfo, NetworkInfo, SystemInfo, TemperatureInfo,
     cli::CliArgs,
     display::{display_info, OutputFormat},
 };
@@ -24,7 +24,7 @@ fn main() -> Result<()> {
 }
 
 fn run_once(args: CliArgs) -> Result<()> {
-    let (system_info, battery_info, disks_info, network_info, temp_info, display_info_data) = collect_info(&args);
+    let (system_info, battery_info, disks_info, network_info, temp_info) = collect_info(&args);
 
     let format = if args.json {
         OutputFormat::Json
@@ -32,7 +32,7 @@ fn run_once(args: CliArgs) -> Result<()> {
         OutputFormat::Text
     };
 
-    display_info(system_info, battery_info, disks_info, network_info, temp_info, display_info_data, format)?;
+    display_info(system_info, battery_info, disks_info, network_info, temp_info, format)?;
 
     Ok(())
 }
@@ -44,14 +44,13 @@ fn run_watch_mode(args: CliArgs) -> Result<()> {
 
     loop {
         clear_screen();
-        let (system_info, battery_info, disks_info, network_info, temp_info, display_info_data) = collect_info(&args);
+        let (system_info, battery_info, disks_info, network_info, temp_info) = collect_info(&args);
         display_info(
             system_info,
             battery_info,
             disks_info,
             network_info,
             temp_info,
-            display_info_data,
             OutputFormat::Text,
         )?;
         println!("Press Ctrl+C to exit | Refreshing every {} seconds", args.interval);
@@ -60,7 +59,7 @@ fn run_watch_mode(args: CliArgs) -> Result<()> {
     }
 }
 
-fn collect_info(args: &CliArgs) -> (SystemInfo, Option<BatteryInfo>, Option<DisksInfo>, Option<NetworkInfo>, Option<TemperatureInfo>, Option<DisplayInfo>) {
+fn collect_info(args: &CliArgs) -> (SystemInfo, Option<BatteryInfo>, Option<DisksInfo>, Option<NetworkInfo>, Option<TemperatureInfo>) {
     let collect_cpu = args.show_all || args.show_cpu;
     let collect_memory = args.show_all || args.show_memory;
     let collect_system = args.show_all || args.show_system;
@@ -68,7 +67,6 @@ fn collect_info(args: &CliArgs) -> (SystemInfo, Option<BatteryInfo>, Option<Disk
     let collect_disk = args.show_all || args.show_disk;
     let collect_network = args.show_all || args.show_network;
     let collect_temp = args.show_all || args.show_temp;
-    let collect_display = args.show_all || args.show_display;
 
     let system_info = SystemInfo::new(collect_cpu, collect_memory, collect_system);
 
@@ -99,13 +97,7 @@ fn collect_info(args: &CliArgs) -> (SystemInfo, Option<BatteryInfo>, Option<Disk
         None
     };
 
-    let display_info_data = if collect_display {
-        Some(DisplayInfo::collect())
-    } else {
-        None
-    };
-
-    (system_info, battery_info, disks_info, network_info, temp_info, display_info_data)
+    (system_info, battery_info, disks_info, network_info, temp_info)
 }
 
 fn clear_screen() {

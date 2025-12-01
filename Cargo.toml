@@ -14,7 +14,6 @@ categories = ["command-line-utilities"]
 # Core functionality
 sysinfo = "0.31"
 battery = "0.7"
-display-info = "0.5"
 
 # CLI & serialization
 pico-args = "0.5"

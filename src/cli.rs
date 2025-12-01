@@ -9,7 +9,6 @@ pub struct CliArgs {
     pub show_disk: bool,
     pub show_network: bool,
     pub show_temp: bool,
-    pub show_display: bool,
     pub show_all: bool,
     pub json: bool,
     pub watch: bool,
@@ -32,7 +31,6 @@ impl CliArgs {
                 show_disk: false,
                 show_network: false,
                 show_temp: false,
-                show_display: false,
                 show_all: false,
                 json: false,
                 watch: false,
@@ -48,12 +46,11 @@ impl CliArgs {
         let show_disk = args.contains("--disk");
         let show_network = args.contains("--network");
         let show_temp = args.contains("--temp");
-        let show_display = args.contains("--display");
         let json = args.contains("--json");
         let watch = args.contains(["-w", "--watch"]);
         let interval: u64 = args.opt_value_from_str(["-i", "--interval"])?.unwrap_or(2);
 
-        let show_all = !show_cpu && !show_memory && !show_system && !show_battery && !show_disk && !show_network && !show_temp && !show_display;
+        let show_all = !show_cpu && !show_memory && !show_system && !show_battery && !show_disk && !show_network && !show_temp;
 
         let remaining = args.finish();
         if !remaining.is_empty() {
@@ -68,7 +65,6 @@ impl CliArgs {
             show_disk,
             show_network,
             show_temp,
-            show_display,
             show_all,
             json,
             watch,
@@ -92,7 +88,6 @@ OPTIONS:
     --disk                Show disk information
     --network             Show network information
     --temp                Show temperature information
-    --display             Show display/monitor information
     --json                Output in JSON format
     -w, --watch           Enable watch mode (live updates)
     -i, --interval <SEC>  Update interval in seconds (default: 2)
@@ -101,7 +96,7 @@ OPTIONS:
 EXAMPLES:
     weni                        # Show all information
     weni --cpu --memory         # Show only CPU and memory
-    weni --display              # Show monitor information
+    weni --temp                 # Show temperature information
     weni --json                 # Output all info as JSON
     weni --watch                # Live monitoring mode
     weni --watch --interval 5   # Monitor with 5 second interval

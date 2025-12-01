@@ -21,7 +21,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux builds - 使用 Cargo.toml 中的激進優化設定
+          # Linux builds
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             artifact_name: weni
@@ -75,7 +75,7 @@ jobs:
             strip: "false"
             codegen_units: "16"
             panic: "unwind"
-          # macOS builds - 使用 Cargo.toml 中的激進優化設定
+          # macOS builds
           - os: macos-15-intel
             target: x86_64-apple-darwin
             artifact_name: weni
@@ -284,11 +284,17 @@ jobs:
 
             ### Windows
             - `weni-windows-x86_64.exe` - Windows 64-bit
+            - `weni-windows-i686.exe` - Windows 32-bit
 
             ### Linux
             - `weni-linux-x86_64.tar.gz` - Linux x86_64 (glibc)
+            - `weni-linux-i686.tar.gz` - Linux i686 (glibc)
             - `weni-linux-x86_64-musl.tar.gz` - Linux x86_64 (musl, static)
+            - `weni-linux-i686-musl.tar.gz` - Linux i686 (musl, static)
+            - `weni-linux-armv7.tar.gz` - Linux ARMv7
+            - `weni-linux-armv7-musl.tar.gz` - Linux ARMv7 (musl, static)
             - `weni-linux-aarch64.tar.gz` - Linux ARM64
+            - `weni-linux-aarch64-musl.tar.gz` - Linux ARM64 (musl, static)
 
             ### macOS
             - `weni-macos-x86_64.tar.gz` - macOS Intel
