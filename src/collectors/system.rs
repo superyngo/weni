@@ -7,6 +7,7 @@ pub struct CpuInfo {
     pub cores: usize,
     pub usage: f32,
     pub frequency: u64,
+    pub architecture: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -23,6 +24,7 @@ pub struct OsInfo {
     pub kernel_version: String,
     pub os_version: String,
     pub hostname: String,
+    pub architecture: String,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -85,11 +87,21 @@ impl SystemInfo {
             0
         };
 
+        // Get CPU architecture
+        let architecture = match std::env::consts::ARCH {
+            "x86" => "32-bit (x86)".to_string(),
+            "x86_64" => "64-bit (x86_64)".to_string(),
+            "aarch64" => "64-bit (ARM64)".to_string(),
+            "arm" => "32-bit (ARM)".to_string(),
+            other => format!("{}", other),
+        };
+
         CpuInfo {
             name: cpu_name,
             cores: physical_cores,
             usage: sys.global_cpu_usage(),
             frequency: cpu_frequency,
+            architecture,
         }
     }
 
@@ -112,11 +124,21 @@ impl SystemInfo {
     }
 
     fn collect_os_info(_sys: &System) -> OsInfo {
+        // Get system architecture
+        let architecture = match std::env::consts::ARCH {
+            "x86" => "32-bit".to_string(),
+            "x86_64" => "64-bit".to_string(),
+            "aarch64" => "64-bit (ARM)".to_string(),
+            "arm" => "32-bit (ARM)".to_string(),
+            other => other.to_string(),
+        };
+
         OsInfo {
             name: System::name().unwrap_or_else(|| "Unknown".to_string()),
             kernel_version: System::kernel_version().unwrap_or_else(|| "Unknown".to_string()),
             os_version: System::os_version().unwrap_or_else(|| "Unknown".to_string()),
             hostname: System::host_name().unwrap_or_else(|| "Unknown".to_string()),
+            architecture,
         }
     }
 }

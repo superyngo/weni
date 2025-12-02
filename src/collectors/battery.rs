@@ -2,7 +2,7 @@ use anyhow::Result;
 use serde::Serialize;
 
 #[derive(Debug, Clone, Serialize)]
-pub struct BatteryInfo {
+pub struct BatteryData {
     pub state: String,
     pub percentage: f32,
     pub time_to_full: Option<String>,
@@ -12,26 +12,56 @@ pub struct BatteryInfo {
     pub temperature: Option<f32>,
 }
 
+#[derive(Debug, Clone, Serialize)]
+pub struct BatteryInfo {
+    pub data: Option<BatteryData>,
+    pub error: Option<String>,
+}
+
 // Battery functionality is disabled on i686-pc-windows-msvc due to battery crate compilation issues
 #[cfg(all(target_os = "windows", target_arch = "x86"))]
 impl BatteryInfo {
-    pub fn collect() -> Result<Option<Self>> {
+    pub fn collect() -> Self {
         // Battery crate doesn't compile on i686-pc-windows-msvc
-        Ok(None)
+        Self {
+            data: None,
+            error: Some("Battery information is not supported on 32-bit Windows".to_string()),
+        }
     }
 }
 
 #[cfg(not(all(target_os = "windows", target_arch = "x86")))]
 impl BatteryInfo {
-    pub fn collect() -> Result<Option<Self>> {
+    pub fn collect() -> Self {
         use battery::{Manager, State};
-        
-        let manager = Manager::new()?;
 
-        let batteries: Vec<_> = manager.batteries()?.collect::<Result<Vec<_>, _>>()?;
+        let manager = match Manager::new() {
+            Ok(m) => m,
+            Err(e) => return Self {
+                data: None,
+                error: Some(format!("Failed to initialize battery manager: {}", e)),
+            },
+        };
+
+        let batteries: Vec<_> = match manager.batteries() {
+            Ok(iter) => match iter.collect::<Result<Vec<_>, _>>() {
+                Ok(b) => b,
+                Err(e) => return Self {
+                    data: None,
+                    error: Some(format!("Failed to enumerate batteries: {}", e)),
+                },
+            },
+            Err(e) => return Self {
+                data: None,
+                error: Some(format!("Failed to access batteries: {}", e)),
+            },
+        };
 
         if batteries.is_empty() {
-            return Ok(None);
+            return Self {
+                data: None,
+                error: Some("No battery found (this may be a desktop system)".to_string()),
+            };
         }
 
         let battery = &batteries[0];
@@ -65,15 +95,18 @@ impl BatteryInfo {
             t.get::<battery::units::thermodynamic_temperature::degree_celsius>()
         });
 
-        Ok(Some(Self {
-            state,
-            percentage,
-            time_to_full,
-            time_to_empty,
-            health,
-            technology,
-            temperature,
-        }))
+        Self {
+            data: Some(BatteryData {
+                state,
+                percentage,
+                time_to_full,
+                time_to_empty,
+                health,
+                technology,
+                temperature,
+            }),
+            error: None,
+        }
     }
 
     fn format_duration(seconds: u64) -> String {

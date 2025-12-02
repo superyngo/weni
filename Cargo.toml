@@ -1,6 +1,6 @@
 [package]
 name = "weni"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["wen"]
 description = "A lightweight cross-platform system information CLI tool"

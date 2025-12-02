@@ -3,7 +3,7 @@ use colored::Colorize;
 use comfy_table::{Table, Row, Cell, presets::UTF8_FULL};
 use serde::Serialize;
 
-use crate::collectors::{SystemInfo, BatteryInfo, DisksInfo, NetworkInfo, TemperatureInfo};
+use crate::collectors::{SystemInfo, BatteryInfo, DisksInfo, NetworkInfo, TemperatureInfo, ProcessInfo, HostsInfo};
 
 pub enum OutputFormat {
     Text,
@@ -17,6 +17,8 @@ struct AllInfo {
     disks: Option<DisksInfo>,
     network: Option<NetworkInfo>,
     temperature: Option<TemperatureInfo>,
+    processes: Option<ProcessInfo>,
+    hosts: Option<HostsInfo>,
 }
 
 pub fn display_info(
@@ -25,11 +27,13 @@ pub fn display_info(
     disks_info: Option<DisksInfo>,
     network_info: Option<NetworkInfo>,
     temp_info: Option<TemperatureInfo>,
+    process_info: Option<ProcessInfo>,
+    hosts_info: Option<HostsInfo>,
     format: OutputFormat,
 ) -> Result<()> {
     match format {
-        OutputFormat::Text => display_text(&system_info, &battery_info, &disks_info, &network_info, &temp_info),
-        OutputFormat::Json => display_json(&system_info, &battery_info, &disks_info, &network_info, &temp_info),
+        OutputFormat::Text => display_text(&system_info, &battery_info, &disks_info, &network_info, &temp_info, &process_info, &hosts_info),
+        OutputFormat::Json => display_json(&system_info, &battery_info, &disks_info, &network_info, &temp_info, &process_info, &hosts_info),
     }
 }
 
@@ -39,6 +43,8 @@ fn display_text(
     disks_info: &Option<DisksInfo>,
     network_info: &Option<NetworkInfo>,
     temp_info: &Option<TemperatureInfo>,
+    process_info: &Option<ProcessInfo>,
+    hosts_info: &Option<HostsInfo>,
 ) -> Result<()> {
 
     if let Some(os) = &system_info.os {
@@ -61,6 +67,10 @@ fn display_text(
             Cell::new("Hostname").fg(comfy_table::Color::Yellow),
             Cell::new(&os.hostname),
         ]));
+        sys_table.add_row(Row::from(vec![
+            Cell::new("Architecture").fg(comfy_table::Color::Yellow),
+            Cell::new(&os.architecture),
+        ]));
         println!("{sys_table}");
     }
 
@@ -75,6 +85,10 @@ fn display_text(
         cpu_table.add_row(Row::from(vec![
             Cell::new("Cores").fg(comfy_table::Color::Yellow),
             Cell::new(cpu.cores.to_string()),
+        ]));
+        cpu_table.add_row(Row::from(vec![
+            Cell::new("Architecture").fg(comfy_table::Color::Yellow),
+            Cell::new(&cpu.architecture),
         ]));
         cpu_table.add_row(Row::from(vec![
             Cell::new("Usage").fg(comfy_table::Color::Yellow),
@@ -112,43 +126,48 @@ fn display_text(
 
     if let Some(battery) = battery_info {
         println!("\n{}", "Battery Information".bold().cyan());
-        let mut bat_table = Table::new();
-        bat_table.load_preset(UTF8_FULL);
-        bat_table.add_row(Row::from(vec![
-            Cell::new("State").fg(comfy_table::Color::Yellow),
-            Cell::new(&battery.state),
-        ]));
-        bat_table.add_row(Row::from(vec![
-            Cell::new("Charge").fg(comfy_table::Color::Yellow),
-            Cell::new(format!("{:.2}%", battery.percentage)),
-        ]));
-        if let Some(ref time) = battery.time_to_full {
+
+        if let Some(ref error) = battery.error {
+            println!("{}", error.red());
+        } else if let Some(ref data) = battery.data {
+            let mut bat_table = Table::new();
+            bat_table.load_preset(UTF8_FULL);
             bat_table.add_row(Row::from(vec![
-                Cell::new("Time to Full").fg(comfy_table::Color::Yellow),
-                Cell::new(time),
+                Cell::new("State").fg(comfy_table::Color::Yellow),
+                Cell::new(&data.state),
             ]));
-        }
-        if let Some(ref time) = battery.time_to_empty {
             bat_table.add_row(Row::from(vec![
-                Cell::new("Time to Empty").fg(comfy_table::Color::Yellow),
-                Cell::new(time),
+                Cell::new("Charge").fg(comfy_table::Color::Yellow),
+                Cell::new(format!("{:.2}%", data.percentage)),
             ]));
-        }
-        bat_table.add_row(Row::from(vec![
-            Cell::new("Health").fg(comfy_table::Color::Yellow),
-            Cell::new(format!("{:.2}%", battery.health)),
-        ]));
-        bat_table.add_row(Row::from(vec![
-            Cell::new("Technology").fg(comfy_table::Color::Yellow),
-            Cell::new(&battery.technology),
-        ]));
-        if let Some(temp) = battery.temperature {
+            if let Some(ref time) = data.time_to_full {
+                bat_table.add_row(Row::from(vec![
+                    Cell::new("Time to Full").fg(comfy_table::Color::Yellow),
+                    Cell::new(time),
+                ]));
+            }
+            if let Some(ref time) = data.time_to_empty {
+                bat_table.add_row(Row::from(vec![
+                    Cell::new("Time to Empty").fg(comfy_table::Color::Yellow),
+                    Cell::new(time),
+                ]));
+            }
             bat_table.add_row(Row::from(vec![
-                Cell::new("Temperature").fg(comfy_table::Color::Yellow),
-                Cell::new(format!("{:.1}°C", temp)),
+                Cell::new("Health").fg(comfy_table::Color::Yellow),
+                Cell::new(format!("{:.2}%", data.health)),
             ]));
+            bat_table.add_row(Row::from(vec![
+                Cell::new("Technology").fg(comfy_table::Color::Yellow),
+                Cell::new(&data.technology),
+            ]));
+            if let Some(temp) = data.temperature {
+                bat_table.add_row(Row::from(vec![
+                    Cell::new("Temperature").fg(comfy_table::Color::Yellow),
+                    Cell::new(format!("{:.1}°C", temp)),
+                ]));
+            }
+            println!("{bat_table}");
         }
-        println!("{bat_table}");
     }
 
     if let Some(disks) = disks_info {
@@ -260,6 +279,58 @@ fn display_text(
         }
     }
 
+    if let Some(processes) = process_info {
+        println!("{}", "Process Information".bold().cyan());
+        let mut proc_table = Table::new();
+        proc_table.load_preset(UTF8_FULL);
+        proc_table.set_header(vec![
+            Cell::new("PID").fg(comfy_table::Color::Yellow),
+            Cell::new("Name").fg(comfy_table::Color::Yellow),
+            Cell::new("CPU %").fg(comfy_table::Color::Yellow),
+            Cell::new("Memory").fg(comfy_table::Color::Yellow),
+            Cell::new("Disk Read").fg(comfy_table::Color::Yellow),
+            Cell::new("Disk Write").fg(comfy_table::Color::Yellow),
+        ]);
+
+        for proc in &processes.processes {
+            proc_table.add_row(vec![
+                Cell::new(proc.pid.to_string()),
+                Cell::new(&proc.name),
+                Cell::new(format!("{:.2}", proc.cpu_usage)),
+                Cell::new(format_bytes(proc.memory_usage)),
+                Cell::new(format_bytes(proc.disk_read)),
+                Cell::new(format_bytes(proc.disk_write)),
+            ]);
+        }
+
+        println!("{proc_table}");
+        println!("\nTotal processes: {}\n", processes.total_count);
+    }
+
+    if let Some(hosts) = hosts_info {
+        if let Some(ref error) = hosts.error {
+            println!("\n{}", "Hosts File Information".bold().cyan());
+            println!("{}", error.red());
+        } else if !hosts.entries.is_empty() {
+            println!("\n{}", "Hosts File Information".bold().cyan());
+            let mut hosts_table = Table::new();
+            hosts_table.load_preset(UTF8_FULL);
+            hosts_table.set_header(vec![
+                Cell::new("IP Address").fg(comfy_table::Color::Yellow),
+                Cell::new("Hostnames").fg(comfy_table::Color::Yellow),
+            ]);
+
+            for entry in &hosts.entries {
+                hosts_table.add_row(vec![
+                    Cell::new(&entry.ip),
+                    Cell::new(entry.hostnames.join(", ")),
+                ]);
+            }
+
+            println!("{hosts_table}\n");
+        }
+    }
+
     println!();
     Ok(())
 }
@@ -270,6 +341,8 @@ fn display_json(
     disks_info: &Option<DisksInfo>,
     network_info: &Option<NetworkInfo>,
     temp_info: &Option<TemperatureInfo>,
+    process_info: &Option<ProcessInfo>,
+    hosts_info: &Option<HostsInfo>,
 ) -> Result<()> {
     let all_info = AllInfo {
         system: system_info.clone(),
@@ -277,6 +350,8 @@ fn display_json(
         disks: disks_info.clone(),
         network: network_info.clone(),
         temperature: temp_info.clone(),
+        processes: process_info.clone(),
+        hosts: hosts_info.clone(),
     };
 
     let json = serde_json::to_string_pretty(&all_info)?;
